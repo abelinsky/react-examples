@@ -1,36 +1,55 @@
-import MeetupList from "../components/meetups/MeetupList";
-import Layout from "../components/layout/Layout";
+import { Fragment } from 'react';
+import Head from 'next/head';
+import { MongoClient } from 'mongodb';
 
-const DUMMY_MEETUPS = [
-  {
-    id: "m1",
-    title: "A first meetup",
-    image:
-      "https://ru.wikipedia.org/wiki/%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0#/media/%D0%A4%D0%B0%D0%B9%D0%BB:Moscow_July_2011-16.jpg",
-    address: "Moscow, 12345",
-    description: "First meetup",
-  },
-  {
-    id: "m2",
-    title: "A second meetup",
-    image:
-      "https://ru.wikipedia.org/wiki/%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0#/media/%D0%A4%D0%B0%D0%B9%D0%BB:Moscow_July_2011-16.jpg",
-    address: "Moscow, 12345",
-    description: "Second meetup",
-  },
+import MeetupList from '../components/meetups/MeetupList';
+import Layout from '../components/layout/Layout';
+import { useEffect, useState } from 'react';
 
-  {
-    id: "m3",
-    title: "A third meetup",
-    image:
-      "https://ru.wikipedia.org/wiki/%D0%9C%D0%BE%D1%81%D0%BA%D0%B2%D0%B0#/media/%D0%A4%D0%B0%D0%B9%D0%BB:Moscow_July_2011-16.jpg",
-    address: "Moscow, 12345",
-    description: "Third meetup",
-  },
-];
-
-const HomePage = () => {
-  return <MeetupList meetups={DUMMY_MEETUPS} />;
+const HomePage = (props) => {
+  return (
+    <Fragment>
+      <Head>
+        <title>React Meetups</title>
+        <meta name="description" content="Browse meetups" />
+      </Head>
+      <MeetupList meetups={props.meetups} />
+    </Fragment>
+  );
 };
+
+// export async function getServerSideProps(context) {
+//   const req = context.req;
+//   const res = context.res;
+
+//   // fetch data
+//   return {
+//     props: { meetups: DUMMY_MEETUPS },
+//   };
+// }
+
+export async function getStaticProps() {
+  // fetch data
+
+  const client = await MongoClient.connect(
+    'mongodb+srv://<user>:<password>@cluster0.874ju.mongodb.net/meetups?retryWrites=true&w=majority'
+  );
+  const db = client.db();
+  const meetupsCollection = db.collection('meetups');
+  const meetups = await meetupsCollection.find().toArray();
+  client.close();
+
+  return {
+    props: {
+      meetups: meetups.map((meetup) => ({
+        title: meetup.title,
+        address: meetup.address,
+        image: meetup.image,
+        id: meetup._id.toString(),
+      })),
+    },
+    revalidate: 10,
+  };
+}
 
 export default HomePage;
